@@ -165,15 +165,17 @@ final class ToneMonitor: NSObject, ObservableObject {
 
         Task {
             do {
+                let startTime = Date()
                 let result = try await ToneClassifier.classify(
                     text: text,
-                    question: "Is the following text agreeable in tone? Consider politeness, empathy, and non-aggressiveness."
+                    question: "Is the following text agreeable in tone? Consider politeness, empathy, non-aggressiveness and non-confrontational tone."
                 )
+                let classificationDuration = Date().timeIntervalSince(startTime)
                 await MainActor.run {
                     self.isAgreeable = result.yes
                     self.disagreeableReason = result.reason
                 }
-                self.log("Agreeableness -> \(result.yes ? "agreeable" : "not agreeable"). Reason=\(result.reason ?? "<none>") for \(text.count) chars")
+                self.log("Agreeableness -> \(result.yes ? "agreeable" : "not agreeable"). Reason=\(result.reason ?? "<none>") for \(text.count) chars. Classification took \(String(format: "%.3f", classificationDuration))s")
 
                 if result.yes == false {
                     self.log("Disagreeable tone detected. Considering notification… lastNotifiedAt=\(String(describing: self.lastNotifiedAt))")
