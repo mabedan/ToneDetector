@@ -8,6 +8,13 @@ import Combine
 import FoundationModels
 #endif
 
+struct BadToneTranscript: Identifiable {
+    let id = UUID()
+    let text: String
+    let reason: String?
+    let timestamp: Date
+}
+
 @MainActor
 final class ToneMonitor: NSObject, ObservableObject {
     private func log(_ message: String) {
@@ -21,6 +28,7 @@ final class ToneMonitor: NSObject, ObservableObject {
     @Published var disagreeableReason: String? = nil
     @Published var statusMessage: String? = nil
     @Published var lastNotifiedAt: Date? = nil
+    @Published var badToneTranscripts: [BadToneTranscript] = []
 
     private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en_US"))
     private var task: SFSpeechRecognitionTask?
@@ -29,6 +37,11 @@ final class ToneMonitor: NSObject, ObservableObject {
     func toggle() {
         log("Toggle requested. Currently enabled=\(enabled)")
         enabled ? stop() : start()
+    }
+
+    func clearBadToneTranscripts() {
+        badToneTranscripts.removeAll()
+        log("Bad tone transcripts cleared")
     }
 
     private func start() {
@@ -180,6 +193,17 @@ final class ToneMonitor: NSObject, ObservableObject {
 
                 if result.yes == false {
                     self.log("Disagreeable tone detected. Considering notification… lastNotifiedAt=\(String(describing: self.lastNotifiedAt))")
+
+                    // Add to bad tone transcripts list
+                    await MainActor.run {
+                        let badTranscript = BadToneTranscript(
+                            text: text,
+                            reason: result.reason,
+                            timestamp: Date()
+                        )
+                        self.badToneTranscripts.append(badTranscript)
+                    }
+
                     let now = Date()
                     if self.lastNotifiedAt == nil || now.timeIntervalSince(self.lastNotifiedAt!) > 60 {
                         self.log("Sending notification (cooldown satisfied)")
