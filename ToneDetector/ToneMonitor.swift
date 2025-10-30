@@ -166,9 +166,10 @@ final class ToneMonitor: NSObject, ObservableObject {
         Task {
             do {
                 let startTime = Date()
+                let prompt = AppPreferences.getAgreeablePrompt()
                 let result = try await ToneClassifier.classify(
                     text: text,
-                    question: "Is the following text agreeable in tone? Consider politeness, empathy, non-aggressiveness and non-confrontational tone."
+                    question: prompt
                 )
                 let classificationDuration = Date().timeIntervalSince(startTime)
                 await MainActor.run {
